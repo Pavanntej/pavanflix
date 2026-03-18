@@ -13,21 +13,37 @@ export default function App() {
   }, [])
 
   const fetchBooks = async () => {
-    const { data } = await supabase.from("books").select("*")
+    const { data, error } = await supabase.from("books").select("*")
+
+    if (error) {
+      console.error(error)
+      return
+    }
+
     setBooks(data || [])
   }
 
+  // 🎨 Dynamic color
   const extractColor = (img) => {
     const fac = new FastAverageColor()
-    fac.getColorAsync(img).then(c => {
-      setBg(c.hex)
-    })
+    fac.getColorAsync(img).then(c => setBg(c.hex))
+  }
+
+  // 🎥 FIX YOUTUBE
+  const getEmbed = (url) => {
+    if (!url) return ""
+    const id =
+      url.includes("youtu.be")
+        ? url.split("/").pop()
+        : url.split("v=")[1]?.split("&")[0]
+
+    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1`
   }
 
   return (
-    <div style={{ background: bg, transition: "1s ease" }}>
+    <div style={{ background: bg, transition: "1s ease", minHeight: "100vh" }}>
 
-      {/* FLOATING HEADER */}
+      {/* HEADER */}
       <div style={{
         position: "fixed",
         top: 0,
@@ -40,6 +56,8 @@ export default function App() {
         background: "rgba(0,0,0,0.4)",
         zIndex: 1000
       }}>
+        <h2 style={{ color: "gold", marginRight: 20 }}>Bookshelf</h2>
+
         {books.map(b => (
           <img
             key={b.id}
@@ -53,8 +71,16 @@ export default function App() {
         ))}
       </div>
 
+      {/* EMPTY STATE */}
+      {!books.length && (
+        <div style={{ paddingTop: 120, textAlign: "center" }}>
+          <h2>No books found</h2>
+          <p>Add from admin dashboard</p>
+        </div>
+      )}
+
       {/* SECTIONS */}
-      {books.map((b, index) => (
+      {books.map((b) => (
         <section
           key={b.id}
           id={b.id}
@@ -62,7 +88,7 @@ export default function App() {
           onMouseEnter={() => extractColor(b.poster_url)}
         >
 
-          {/* PARALLAX BACKGROUND */}
+          {/* BACKGROUND BLEND */}
           <motion.div
             className="overlay-bg"
             style={{ backgroundImage: `url(${b.poster_url})` }}
@@ -71,7 +97,16 @@ export default function App() {
             transition={{ duration: 1 }}
           />
 
-          {/* LEFT CONTENT */}
+          {/* DARK GRADIENT OVERLAY */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(to right, rgba(0,0,0,0.9), rgba(0,0,0,0.4))",
+            zIndex: 1
+          }} />
+
+          {/* LEFT */}
           <motion.div
             className="glass"
             initial={{ opacity: 0, y: 60 }}
@@ -90,17 +125,6 @@ export default function App() {
               <button className="btn" onClick={() => window.open(b.buy_bw)}>
                 B&W
               </button>
-              <button
-                className="btn"
-                onClick={() =>
-                  navigator.share({
-                    title: b.title,
-                    url: window.location.href
-                  })
-                }
-              >
-                Share
-              </button>
             </div>
 
             <p style={{ marginTop: 20 }}>{b.description}</p>
@@ -108,11 +132,7 @@ export default function App() {
             {/* CAST */}
             <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
               {b.cast?.map((c, i) => (
-                <motion.div
-                  key={i}
-                  whileHover={{ scale: 1.1 }}
-                  style={{ textAlign: "center" }}
-                >
+                <motion.div key={i} whileHover={{ scale: 1.1 }}>
                   <img
                     src={c.image}
                     style={{
@@ -141,10 +161,10 @@ export default function App() {
             }}
           >
             <motion.iframe
-              whileHover={{ scale: 1.08 }}
+              whileHover={{ scale: 1.05 }}
               width="320"
               height="570"
-              src={b.trailer_url + "?autoplay=1&mute=1"}
+              src={getEmbed(b.trailer_url)}
               allow="autoplay"
               style={{
                 borderRadius: 20,
@@ -169,7 +189,8 @@ export default function App() {
         </div>
 
         <div style={{ marginTop: 20 }}>
-          <a href="https://www.instagram.com/pavanntej/">Instagram</a> | <a href="https://www.youtube.com/@pavanntej">YouTube</a>
+          <a href="https://www.instagram.com/pavanntej/">Instagram</a> | 
+          <a href="https://www.youtube.com/@pavanntej"> YouTube</a>
         </div>
       </div>
     </div>
