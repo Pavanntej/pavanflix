@@ -56,6 +56,7 @@ export default function App() {
 function Dashboard() {
   const [books, setBooks] = useState([])
   const [form, setForm] = useState({})
+  const [castList, setCastList] = useState([])
   const [editingId, setEditingId] = useState(null)
   const [uploading, setUploading] = useState(false)
 
@@ -105,11 +106,55 @@ function Dashboard() {
     setUploading(false)
   }
 
+  // ===== CAST FUNCTIONS =====
+  const addCast = () => {
+    setCastList([...castList, { name: "", image: "" }])
+  }
+
+  const updateCastName = (index, value) => {
+    const updated = [...castList]
+    updated[index].name = value
+    setCastList(updated)
+  }
+
+  const uploadCastImage = async (e, index) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    setUploading(true)
+
+    const fileName = Date.now() + "-" + file.name
+
+    const { error } = await supabase.storage
+      .from("cast")
+      .upload(fileName, file)
+
+    if (error) {
+      alert(error.message)
+      setUploading(false)
+      return
+    }
+
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/cast/${fileName}`
+
+    const updated = [...castList]
+    updated[index].image = url
+    setCastList(updated)
+
+    setUploading(false)
+  }
+
+  const removeCast = (index) => {
+    setCastList(castList.filter((_, i) => i !== index))
+  }
+
   const saveBook = async () => {
     const cleanForm = { ...form }
 
     delete cleanForm.poster_url_preview
     delete cleanForm.logo_url_preview
+
+    cleanForm.cast = castList
 
     if (editingId) {
       await supabase.from("books").update(cleanForm).eq("id", editingId)
@@ -120,6 +165,7 @@ function Dashboard() {
     alert("Saved successfully ✅")
 
     setForm({})
+    setCastList([])
     setEditingId(null)
     fetchBooks()
   }
@@ -130,6 +176,8 @@ function Dashboard() {
       poster_url_preview: b.poster_url,
       logo_url_preview: b.logo_url
     })
+
+    setCastList(b.cast || [])
     setEditingId(b.id)
   }
 
@@ -180,19 +228,39 @@ function Dashboard() {
           <img src={form.logo_url_preview || form.logo_url} style={styles.preview} />
         )}
 
-        {/* CAST JSON */}
-        <textarea
-          style={styles.input}
-          placeholder="Cast JSON"
-          onChange={(e) => {
-            try {
-              setForm({ ...form, cast: JSON.parse(e.target.value) })
-            } catch {
-              alert("Invalid JSON")
-            }
-          }}
-          value={JSON.stringify(form.cast || [])}
-        />
+        {/* CAST UI */}
+        <h4 style={{ marginTop: 20 }}>Cast</h4>
+
+        {castList.map((c, index) => (
+          <div key={index} style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center" }}>
+            <input
+              style={styles.input}
+              placeholder="Actor Name"
+              value={c.name}
+              onChange={(e) => updateCastName(index, e.target.value)}
+            />
+
+            <input type="file" onChange={(e) => uploadCastImage(e, index)} />
+
+            {c.image && (
+              <img
+                src={c.image}
+                style={{ width: 50, height: 50, borderRadius: "50%" }}
+              />
+            )}
+
+            <button
+              style={{ ...styles.btn, background: "crimson" }}
+              onClick={() => removeCast(index)}
+            >
+              X
+            </button>
+          </div>
+        ))}
+
+        <button style={styles.btn} onClick={addCast}>
+          + Add Cast
+        </button>
 
         <button style={styles.btn} onClick={saveBook}>
           {editingId ? "Update Book" : "Add Book"}
