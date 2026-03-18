@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react"
 import { supabase } from "./lib/supabase"
 import { motion } from "framer-motion"
+import { FastAverageColor } from "fast-average-color"
 import "./index.css"
 
 export default function App() {
   const [books, setBooks] = useState([])
+  const [bg, setBg] = useState("#0a0a0a")
 
   useEffect(() => {
     fetchBooks()
@@ -15,24 +17,37 @@ export default function App() {
     setBooks(data || [])
   }
 
-  return (
-    <div>
+  const extractColor = (img) => {
+    const fac = new FastAverageColor()
+    fac.getColorAsync(img).then(c => {
+      setBg(c.hex)
+    })
+  }
 
-      {/* HEADER */}
+  return (
+    <div style={{ background: bg, transition: "1s ease" }}>
+
+      {/* FLOATING HEADER */}
       <div style={{
+        position: "fixed",
+        top: 0,
+        width: "100%",
         display: "flex",
-        overflowX: "auto",
-        padding: 20,
         gap: 20,
-        background: "#000"
+        padding: 15,
+        overflowX: "auto",
+        backdropFilter: "blur(20px)",
+        background: "rgba(0,0,0,0.4)",
+        zIndex: 1000
       }}>
         {books.map(b => (
           <img
             key={b.id}
             src={b.logo_url}
-            style={{ height: 60, cursor: "pointer" }}
+            style={{ height: 50, cursor: "pointer" }}
             onClick={() =>
-              document.getElementById(b.id).scrollIntoView({ behavior: "smooth" })
+              document.getElementById(b.id)
+                .scrollIntoView({ behavior: "smooth" })
             }
           />
         ))}
@@ -40,35 +55,41 @@ export default function App() {
 
       {/* SECTIONS */}
       {books.map((b, index) => (
-        <section key={b.id} id={b.id} className="section">
+        <section
+          key={b.id}
+          id={b.id}
+          className="section"
+          onMouseEnter={() => extractColor(b.poster_url)}
+        >
 
-          {/* BACKGROUND BLEND */}
-          <div
+          {/* PARALLAX BACKGROUND */}
+          <motion.div
             className="overlay-bg"
             style={{ backgroundImage: `url(${b.poster_url})` }}
+            initial={{ scale: 1.3 }}
+            whileInView={{ scale: 1.1 }}
+            transition={{ duration: 1 }}
           />
 
-          {/* LEFT */}
+          {/* LEFT CONTENT */}
           <motion.div
             className="glass"
-            initial={{ opacity: 0, x: -80 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 60 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            style={{ width: "50%", zIndex: 1 }}
+            style={{ width: "45%", zIndex: 2 }}
           >
-            <img src={b.logo_url} style={{ width: 220 }} />
+            <img src={b.logo_url} style={{ width: 240 }} />
 
-            <p style={{ color: "gold", marginTop: 10 }}>{b.genre}</p>
+            <p style={{ color: "gold" }}>{b.genre}</p>
 
-            <div style={{ marginTop: 20 }}>
+            <div style={{ marginTop: 15 }}>
               <button className="btn" onClick={() => window.open(b.buy_color)}>
-                Buy Color
+                Color
               </button>
-
               <button className="btn" onClick={() => window.open(b.buy_bw)}>
-                Buy B&W
+                B&W
               </button>
-
               <button
                 className="btn"
                 onClick={() =>
@@ -82,69 +103,73 @@ export default function App() {
               </button>
             </div>
 
-            <p style={{ marginTop: 20, lineHeight: 1.6 }}>
-              {b.description}
-            </p>
+            <p style={{ marginTop: 20 }}>{b.description}</p>
 
             {/* CAST */}
-            <div style={{ display: "flex", gap: 15, marginTop: 20 }}>
+            <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
               {b.cast?.map((c, i) => (
-                <div key={i} style={{ textAlign: "center" }}>
+                <motion.div
+                  key={i}
+                  whileHover={{ scale: 1.1 }}
+                  style={{ textAlign: "center" }}
+                >
                   <img
                     src={c.image}
                     style={{
-                      width: 70,
-                      height: 70,
+                      width: 65,
+                      height: 65,
                       borderRadius: "50%",
-                      objectFit: "cover",
                       border: "2px solid gold"
                     }}
                   />
                   <p style={{ fontSize: 12 }}>{c.name}</p>
-                </div>
+                </motion.div>
               ))}
             </div>
           </motion.div>
 
-          {/* RIGHT TRAILER */}
+          {/* TRAILER */}
           <motion.div
-            initial={{ opacity: 0, x: 80 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 60 }}
+            whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             style={{
-              width: "50%",
+              width: "55%",
               display: "flex",
               justifyContent: "center",
-              zIndex: 1
+              zIndex: 2
             }}
           >
-            <iframe
+            <motion.iframe
+              whileHover={{ scale: 1.08 }}
               width="320"
               height="570"
               src={b.trailer_url + "?autoplay=1&mute=1"}
               allow="autoplay"
               style={{
                 borderRadius: 20,
-                boxShadow: "0 0 40px rgba(255,215,0,0.3)"
+                boxShadow: `0 0 60px ${bg}`
               }}
             />
           </motion.div>
         </section>
       ))}
 
-      {/* FOOTER CONTACT */}
+      {/* FOOTER */}
       <div style={{
-        padding: 40,
+        padding: 50,
         textAlign: "center",
-        background: "#000"
+        background: "black"
       }}>
-        <h3>Contact</h3>
-
-        <a href="https://wa.me/YOUR_NUMBER" className="btn">WhatsApp</a>
-        <a href="mailto:YOUR_EMAIL" className="btn">Email</a>
+        <h2>Connect</h2>
 
         <div style={{ marginTop: 20 }}>
-          <a href="#">Instagram</a> | <a href="#">YouTube</a>
+          <a className="btn" href="https://wa.me/9542648520">WhatsApp</a>
+          <a className="btn" href="mailto:pavanntej@gmail.com">Email</a>
+        </div>
+
+        <div style={{ marginTop: 20 }}>
+          <a href="https://www.instagram.com/pavanntej/">Instagram</a> | <a href="https://www.youtube.com/@pavanntej">YouTube</a>
         </div>
       </div>
     </div>
